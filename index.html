@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Snake Game</title>
-    <link rel="stylesheet" href="static/style.css">
+    <link rel="stylesheet" href="style.css">
 </head>
 <body>
     <div id="menu">
@@ -20,10 +20,10 @@
             <div style="flex: 1;">
                 <label>Difficulty:</label>
                 <select id="difficulty">
-                    <option value="120" data-name="easy">Easy</option>
-                    <option value="80" data-name="medium" selected>Medium</option>
-                    <option value="40" data-name="hard">Hard</option>
-                </select>                
+                    <option value="120">Easy</option>
+                    <option value="80" selected>Medium</option>
+                    <option value="40">Hard</option>
+                </select>
             </div>
             <div style="flex: 1;">
                 <button onclick="startGame()">Start Game</button>
@@ -36,11 +36,6 @@
     <div id="scoreDisplay">Score: 0</div>
     <canvas id="gameCanvas" width="1000" height="800"></canvas>
 
-    <div id="leaderboard">
-        <h2>Top 10</h2>
-        <ul id="topScoresList"></ul>
-    </div>    
-
-    <script src="static/script.js"></script>
+    <script src="script.js"></script>
 </body>
 </html>
