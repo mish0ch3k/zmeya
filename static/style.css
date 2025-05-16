@@ -71,3 +71,33 @@ canvas {
     margin: auto;
     background-color: black;
 }
+
+#leaderboard {
+    position: absolute;
+    top: 80px;
+    right: 40px;
+    width: 200px;
+    background-color: rgba(30, 30, 30, 0.95);
+    padding: 15px;
+    border-radius: 10px;
+    color: white;
+    font-size: 16px;
+    display: none;
+}
+
+#leaderboard h2 {
+    margin-top: 0;
+    font-size: 20px;
+    border-bottom: 1px solid white;
+    padding-bottom: 5px;
+}
+
+#leaderboard ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+#leaderboard li {
+    margin-bottom: 5px;
+}

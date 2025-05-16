@@ -143,17 +143,20 @@ function isGameOver() {
 
 function gameOver() {
     gameRunning = false;
+
+    // Показуємо меню
     document.getElementById("menu").style.display = "flex";
     document.getElementById("gameOverScore").innerHTML = `Game Over - Score: <b>${score}</b>`;
     document.getElementById("gameOverScore").style.display = "block";
 
+    // Оновлення локального high score
     if (score > highScore) {
         highScore = score;
         localStorage.setItem("highScore", highScore);
     }
-    
     document.getElementById("highScore").innerHTML = `High Score: ${highScore}`;
 
+    // Надсилаємо результат на сервер
     fetch("/submit_score", {
         method: "POST",
         headers: {
@@ -162,11 +165,38 @@ function gameOver() {
         body: JSON.stringify({
             nickname: document.getElementById("nickname").value || "Player",
             score: score,
-            difficulty: document.getElementById("difficulty").value
+            difficulty: document.getElementById("difficulty").selectedOptions[0].dataset.name
         })
+    })
+    .then(response => response.json())
+    .then(data => {
+        console.log("Score submitted:", data.message);
+        loadTopScores();  // Оновлення топ-10
+    })
+    .catch(error => {
+        console.error("Error submitting score:", error);
     });
-    
 }
+
+function loadTopScores() {
+    fetch("/top_scores")
+        .then(res => res.json())
+        .then(data => {
+            const list = document.getElementById("topScoresList");
+            list.innerHTML = "";
+            data.forEach((entry, index) => {
+                const li = document.createElement("li");
+                li.textContent = `${index + 1}. ${entry.nickname} - ${entry.score} (${entry.difficulty})`;
+                list.appendChild(li);
+            });
+            document.getElementById("leaderboard").style.display = "block";
+        })
+        .catch(error => {
+            console.error("Error loading top scores:", error);
+        });
+}
+
+
 
 document.addEventListener("keydown", event => {
     if (changingDirection) return;
