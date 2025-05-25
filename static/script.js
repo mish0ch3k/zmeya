@@ -9,16 +9,57 @@ let food = generateFood();
 let score = 0;
 let gameRunning = false;
 let highScore = localStorage.getItem("highScore") || 0;
-let gameSpeed = 80; // default: Medium
+let gameSpeed = 80;
 document.getElementById("highScore").innerHTML = `High Score: ${highScore}`;
 
 function startGame() {
     let nickname = document.getElementById("nickname").value || "Player";
     let snakeColor = document.getElementById("snakeColor").value;
 
+    // Якщо капча вже пройдена в цій сесії — запускай гру без перевірки
+    if (sessionStorage.getItem("captcha_passed") === "true") {
+        startActualGame();
+        return;
+    }
+
+    let recaptchaResponse = grecaptcha.getResponse();
+
+    if (!nickname) {
+        alert("Please enter your nickname.");
+        return;
+    }
+
+    if (!recaptchaResponse) {
+        alert("Please confirm you are not a robot.");
+        return;
+    }
+
+    fetch('/validate_captcha', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ response: recaptchaResponse })
+    })
+    .then(res => res.json())
+    .then(data => {
+        if (data.success) {
+            sessionStorage.setItem("captcha_passed", "true");  // тільки в межах цієї сесії
+            document.getElementById("recaptchaContainer").style.display = "none";
+            grecaptcha.reset();  // очищення капчі (опційно)
+            startActualGame();
+        } else {
+            alert("Captcha failed. Please try again.");
+        }
+    })
+    .catch(err => {
+        console.error("Captcha validation error:", err);
+        alert("An error occurred. Please try again.");
+    });
+}
+
+
+function startActualGame() {
     gameSpeed = parseInt(document.getElementById("difficulty").value);
 
-    
     document.getElementById("menu").style.display = "none";
     document.getElementById("gameOverScore").style.display = "none";
     canvas.style.display = "block";
@@ -71,11 +112,9 @@ function drawSnake() {
     snake.forEach((segment, index) => {
         ctx.beginPath();
         if (index === 0) {
-            // Голова — коло
             ctx.fillStyle = snakeColor;
             ctx.arc(segment.x + box / 2, segment.y + box / 2, box / 2, 0, 2 * Math.PI);
         } else {
-            // Тіло — закруглений прямокутник
             ctx.fillStyle = lightenColor(snakeColor, 0.3);
             roundRect(ctx, segment.x, segment.y, box, box, 6);
         }
@@ -96,8 +135,6 @@ function roundRect(ctx, x, y, width, height, radius) {
     ctx.quadraticCurveTo(x, y, x + radius, y);
     ctx.closePath();
 }
-
-
 
 function drawFood() {
     ctx.fillStyle = "red";
@@ -143,20 +180,19 @@ function isGameOver() {
 
 function gameOver() {
     gameRunning = false;
-
-    // Показуємо меню
     document.getElementById("menu").style.display = "flex";
     document.getElementById("gameOverScore").innerHTML = `Game Over - Score: <b>${score}</b>`;
     document.getElementById("gameOverScore").style.display = "block";
 
-    // Оновлення локального high score
     if (score > highScore) {
         highScore = score;
         localStorage.setItem("highScore", highScore);
+
+        showWinningAnimation();
     }
+
     document.getElementById("highScore").innerHTML = `High Score: ${highScore}`;
 
-    // Надсилаємо результат на сервер
     fetch("/submit_score", {
         method: "POST",
         headers: {
@@ -171,7 +207,7 @@ function gameOver() {
     .then(response => response.json())
     .then(data => {
         console.log("Score submitted:", data.message);
-        loadTopScores();  // Оновлення топ-10
+        loadTopScores();
     })
     .catch(error => {
         console.error("Error submitting score:", error);
@@ -196,7 +232,17 @@ function loadTopScores() {
         });
 }
 
-
+function loadHighScoreFromServer() {
+    fetch("/get_high_score")
+        .then(response => response.json())
+        .then(data => {
+            highScore = data.high_score;
+            document.getElementById("highScore").innerText = `High Score: ${highScore}`;
+        })
+        .catch(error => {
+            console.error("Error fetching high score:", error);
+        });
+}
 
 document.addEventListener("keydown", event => {
     if (changingDirection) return;
@@ -208,3 +254,53 @@ document.addEventListener("keydown", event => {
     if (key === "ArrowLeft" && direction !== "RIGHT") direction = "LEFT";
     if (key === "ArrowRight" && direction !== "LEFT") direction = "RIGHT";
 });
+
+
+let animation = lottie.loadAnimation({
+    container: document.getElementById('winningAnimation'),
+    renderer: 'svg',
+    loop: false,
+    autoplay: false,
+    path: '/static/animations/win_animation.json'
+});
+
+function showWinningAnimation() {
+    const animContainer = document.getElementById('winningAnimation');
+    animContainer.style.display = 'block';
+    animation.goToAndPlay(0, true);
+    
+    setTimeout(() => {
+        animContainer.style.display = 'none';
+    }, 3000);
+}
+
+function deleteScores() {
+    const password = document.getElementById('adminPassword').value;
+    const nickname = document.getElementById('nickname').value || prompt("Enter your nickname:");
+
+    fetch('/delete_scores', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ password: password, nickname: nickname })
+    })
+    .then(response => response.json())
+    .then(data => {
+        alert(data.message);
+        if (data.success) {
+            loadTopScores(); // оновити топ після видалення
+        }
+    })
+    .catch(error => {
+        console.error("Error deleting scores:", error);
+    });
+}
+
+
+window.onload = function () {
+    loadTopScores();
+    loadHighScoreFromServer();
+
+    if (sessionStorage.getItem("captcha_passed") === "true") {
+        document.getElementById("recaptchaContainer").style.display = "none";
+    }
+};
